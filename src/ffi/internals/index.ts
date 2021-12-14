@@ -1,7 +1,11 @@
-// https://github.com/node-ffi/node-ffi/wiki/Node-FFI-Tutorial
-import ffi = require('ffi-napi');
+import { getNativeFunction, getBufferPointer } from 'sbffi';
 import path = require('path');
-import { FfiBinding } from './types';
+import {
+  FfiBinding,
+  LibDescription,
+  StringPointer,
+  VariableType,
+} from './types';
 import logger from '../../logger';
 
 // This is a lookup between process.platform and
@@ -33,18 +37,54 @@ const EXTENSION_LOOKUP = {
   'windows-x86_64': 'dll',
 };
 
+const mapType = (typ: VariableType) => {
+  switch (typ) {
+    case 'int':
+    case 'int32':
+      return 'int32_t';
+    case 'string':
+      return 'char *';
+    case 'double':
+      return 'double';
+    case 'float':
+      return 'float';
+    case 'bool':
+      return 'bool';
+    case 'void':
+      return 'void';
+    case 'pointer':
+      return 'pointer';
+    default:
+      throw new Error(`Unmapped native type for '${typ}'`);
+  }
+};
+
 // This function exists to wrap the untyped ffi lib
 // and return a typed version based on the description
-export const createFfi = <T>(
+export const createFfi = <T extends LibDescription<string>>(
   filename: string,
   description: T
 ): FfiBinding<T> => {
   logger.trace(`Native core located at '${filename}'`);
-  const lib = ffi.Library(
-    path.resolve(__dirname, '..', '..', '..', 'ffi', filename),
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    description as { [k: string]: any }
-  );
+
+  const filePath = path.resolve(__dirname, '..', '..', '..', 'ffi', filename);
+
+  const lib = Object.keys(description).reduce((acc, functionName) => {
+    console.log(
+      'description[functionName][1].map(mapType)',
+      description[functionName][1].map(mapType)
+    );
+    return {
+      ...acc,
+      [functionName]: getNativeFunction(
+        filePath,
+        functionName,
+        mapType(description[functionName][0]),
+        description[functionName][1].map(mapType)
+      ),
+    };
+  }, {} as FfiBinding<T>);
+
   logger.trace(`Native core linked successfully`);
 
   return lib;
@@ -83,3 +123,6 @@ export const libName = (
 
   return `${version}-${libnamePrefix}${library}-${target}.${extension}`;
 };
+
+export const convertString = (str: string): StringPointer =>
+  getBufferPointer(Buffer.from(str));

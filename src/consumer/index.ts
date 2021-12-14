@@ -1,4 +1,5 @@
 import { getFfiLib } from '../ffi';
+import { convertString } from '../ffi/internals';
 import {
   CREATE_MOCK_SERVER_ERRORS,
   FfiSpecificationVersion,
@@ -6,7 +7,11 @@ import {
   INTERACTION_PART_REQUEST,
   INTERACTION_PART_RESPONSE,
 } from '../ffi/types';
-import { getLogLevel, logCrashAndThrow, logErrorAndThrow } from '../logger';
+import logger, {
+  getLogLevel,
+  logCrashAndThrow,
+  logErrorAndThrow,
+} from '../logger';
 import { wrapAllWithCheck, wrapWithCheck } from './checkErrors';
 
 import {
@@ -30,7 +35,10 @@ export const makeConsumerPact = (
 ): ConsumerPact => {
   const lib = getFfiLib(logLevel);
 
-  const pactPtr = lib.pactffi_new_pact(consumer, provider);
+  const pactPtr = lib.pactffi_new_pact(
+    convertString(consumer),
+    convertString(provider)
+  );
   if (!lib.pactffi_with_specification(pactPtr, version)) {
     throw new Error(
       `Unable to set core spec version. The pact FfiSpecificationVersion '${version}' may be invalid (note this is not the same as the pact spec version)`
@@ -45,7 +53,7 @@ export const makeConsumerPact = (
     ) => {
       const port = lib.pactffi_create_mock_server_for_pact(
         pactPtr,
-        `${address}:${requestedPort ? requestedPort : 0}`,
+        convertString(`${address}:${requestedPort ? requestedPort : 0}`),
         tls
       );
       const error: keyof typeof CREATE_MOCK_SERVER_ERRORS | undefined =
@@ -72,6 +80,7 @@ export const makeConsumerPact = (
           `The pact core returned an unhandled error code '${port}'`
         );
       }
+      logger.info(`Spun up pact mock at port ${port}`);
       return port;
     },
 
@@ -80,7 +89,8 @@ export const makeConsumerPact = (
     },
     mockServerMismatches: (port: number): MatchingResult[] => {
       const results: MatchingResult[] = JSON.parse(
-        lib.pactffi_mock_server_mismatches(port)
+        '[]'
+        /* lib.pactffi_mock_server_mismatches(port).toString() */
       );
       return results.map((result: MatchingResult) => ({
         ...result,
@@ -100,7 +110,11 @@ export const makeConsumerPact = (
       )(port);
     },
     writePactFile: (port: number, dir: string, merge = true) => {
-      const result = lib.pactffi_write_pact_file(port, dir, !merge);
+      const result = lib.pactffi_write_pact_file(
+        port,
+        convertString(dir),
+        !merge
+      );
       switch (result) {
         case FfiWritePactResponse.SUCCESS:
           return;
@@ -121,57 +135,67 @@ export const makeConsumerPact = (
       }
     },
     newInteraction: (description: string): ConsumerInteraction => {
-      const interactionPtr = lib.pactffi_new_interaction(pactPtr, description);
+      const interactionPtr = lib.pactffi_new_interaction(
+        pactPtr,
+        convertString(description)
+      );
       return wrapAllWithCheck<ConsumerInteraction>({
         uponReceiving: (description: string) => {
-          return lib.pactffi_upon_receiving(interactionPtr, description);
+          return lib.pactffi_upon_receiving(
+            interactionPtr,
+            convertString(description)
+          );
         },
         given: (state: string) => {
-          return lib.pactffi_given(interactionPtr, state);
+          return lib.pactffi_given(interactionPtr, convertString(state));
         },
         withRequest: (method: string, path: string) => {
-          return lib.pactffi_with_request(interactionPtr, method, path);
+          return lib.pactffi_with_request(
+            interactionPtr,
+            convertString(method),
+            convertString(path)
+          );
         },
         withQuery: (name: string, index: number, value: string) => {
           return lib.pactffi_with_query_parameter(
             interactionPtr,
-            name,
+            convertString(name),
             index,
-            value
+            convertString(value)
           );
         },
         withRequestHeader: (name: string, index: number, value: string) => {
           return lib.pactffi_with_header(
             interactionPtr,
             INTERACTION_PART_REQUEST,
-            name,
+            convertString(name),
             index,
-            value
+            convertString(value)
           );
         },
         withRequestBody: (body: string, contentType: string) => {
           return lib.pactffi_with_body(
             interactionPtr,
             INTERACTION_PART_REQUEST,
-            contentType,
-            body
+            convertString(contentType),
+            convertString(body)
           );
         },
         withResponseHeader: (name: string, index: number, value: string) => {
           return lib.pactffi_with_header(
             interactionPtr,
             INTERACTION_PART_RESPONSE,
-            name,
+            convertString(name),
             index,
-            value
+            convertString(value)
           );
         },
         withResponseBody: (body: string, contentType: string) => {
           return lib.pactffi_with_body(
             interactionPtr,
             INTERACTION_PART_RESPONSE,
-            contentType,
-            body
+            convertString(contentType),
+            convertString(body)
           );
         },
         withStatus: (status: number) => {

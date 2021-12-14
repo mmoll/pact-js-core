@@ -1,34 +1,15 @@
-import ref = require('ref-napi');
-import refStructDi = require('ref-struct-di');
 import { FfiEnum } from './internals/types';
 import { FfiInteractionPart, FfiSpecificationVersion } from './types';
 
-const struct = refStructDi(ref);
-
-const unknown = ref.types.void; // unknown type
-
-const pact = unknown;
-const interaction = unknown;
-const InteractionPtr = ref.refType(interaction);
-const PactPtr = ref.refType(pact);
-const PactHandle = struct({
-  pact: PactPtr,
-});
-const InteractionHandle = struct({
-  pact: PactPtr,
-  interaction: InteractionPtr,
-});
-
-const StringResultStruct = struct({
-  tag: ref.types.int,
-  ok: ref.types.CString,
-});
+const PactHandle = 'pointer' as const;
+const InteractionHandle = 'pointer' as const;
+const StringResultStruct = 'pointer' as const;
 
 // We have to declare this twice because typescript can't figure it out
 // There's a workaround here we could employ:
 // https://gist.github.com/jcalz/381562d282ebaa9b41217d1b31e2c211
 export type FfiDeclarations = {
-  pactffi_init: ['string', ['string']];
+  pactffi_init: ['void', ['string']];
   pactffi_version: ['string', []];
   pactffi_free_string: ['void', ['string']];
   pactffi_verify: ['int32', ['string']];
@@ -208,7 +189,7 @@ export type FfiDeclarations = {
 };
 
 export const declarations: FfiDeclarations = {
-  pactffi_init: ['string', ['string']],
+  pactffi_init: ['void', ['string']],
   pactffi_version: ['string', []],
   pactffi_free_string: ['void', ['string']],
   pactffi_verify: ['int32', ['string']],

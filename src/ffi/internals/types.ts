@@ -14,15 +14,16 @@ type FfiFunction<T> = T extends (...a: infer Args) => infer ReturnType
 // We allow any here, because typescript won't accept the `StructType`from
 // ref-struct-di for some reason. Using any lets us pass through arbitrary
 // parameter types, so we just have to be careful to get them right.
-type VariableType =
+export type VariableType =
   | 'string'
   | 'void'
   | 'int'
   | 'int32'
   | 'double'
   | 'float'
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  | any;
+  | 'bool'
+  | 'pointer'
+  | unknown;
 
 // This allows us to have enum types report as 'int', but
 // be typed correctly on the way back
@@ -32,8 +33,10 @@ type UnpackEnum<T> = [T] extends [unknown]
     : never
   : never;
 
+export type StringPointer = unknown;
+
 type ActualType<T> = [T] extends ['string']
-  ? string
+  ? StringPointer
   : [T] extends ['void']
   ? void
   : [number] extends [T]
@@ -65,7 +68,7 @@ type FunctionFromArray<A extends TupleType> = A extends [
   ? (...args: ArrayActualType<ArgArrayType>) => ActualType<ReturnType>
   : never;
 
-type LibDescription<Functions extends string> = {
+export type LibDescription<Functions extends string> = {
   [k in Functions]: [VariableType, Array<VariableType>];
 };
 

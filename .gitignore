@@ -44,6 +44,7 @@ src/**/**.d.ts
 test/**/**.d.ts
 bin/**/**.d.ts
 **/*.d.ts
+!ts-stubs.d.ts
 *.js
 
 *.js.map

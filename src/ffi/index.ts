@@ -1,4 +1,4 @@
-import { createFfi, libName } from './internals';
+import { createFfi, libName, convertString } from './internals';
 import { FfiBinding } from './internals/types';
 
 import logger, { DEFAULT_LOG_LEVEL } from '../logger';
@@ -20,7 +20,7 @@ const initialiseFfi = (logLevel: LogLevel): FfiBinding<FfiDeclarations> => {
     libName('pact_ffi', `v${PACT_FFI_VERSION}`),
     declarations
   );
-  lib.pactffi_init(LOG_ENV_VAR_NAME);
+  lib.pactffi_init(convertString(LOG_ENV_VAR_NAME));
   return lib;
 };
 
