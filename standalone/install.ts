@@ -151,9 +151,23 @@ function downloadFileRetry(
       let len = 0;
       let downloaded = 0;
       let time = Date.now();
-      let ca = config.read()['cafile'];
-      if (ca) {
-        ca = fs.readFileSync(ca);
+      let npmrc = {
+        cafile: '',
+        'strict-ssl': false,
+      };
+      let ca;
+
+      try {
+        npmrc = {
+          ...npmrc,
+          ...config.read(),
+        };
+      } catch {
+        // see https://github.com/pact-foundation/pact-js-core/issues/384
+      }
+
+      if (npmrc.cafile !== '') {
+        ca = fs.readFileSync(npmrc?.cafile);
       }
       needle
         .get(url, {
@@ -161,7 +175,7 @@ function downloadFileRetry(
           headers: {
             'User-Agent': 'https://github.com/pact-foundation/pact-node',
           },
-          rejectUnauthorized: config.read()['strict-ssl'] || false,
+          rejectUnauthorized: npmrc['strict-ssl'],
           ca: ca,
         })
         .on('error', (e: string) => reject(e))
